@@ -222,6 +222,14 @@ module Authorization
       #   Privilege required; defaults to action_name
       # [:+context+] 
       #   The privilege's context, defaults to controller_name, pluralized.
+      # [:+namespace+] 
+      #   Prefix the default controller context with.
+      #   * +true+: the model namespace(s) separated with underscores,
+      #   * +Symbol+ or +String+: the given symbol or string
+      #   * else: no prefix
+      #   Example:
+      #     filter_access_to :show, :namespace => true
+      #     filter_access_to :delete, :namespace => :foo
       # [:+attribute_check+]
       #   Enables the check of attributes defined in the authorization rules.
       #   Defaults to false.  If enabled, filter_access_to will use a context
@@ -250,6 +258,7 @@ module Authorization
         options = {
           :require => nil,
           :context => nil,
+          :namespace => nil,
           :attribute_check => false,
           :model => nil,
           :load_method => nil
@@ -268,6 +277,7 @@ module Authorization
         end
         filter_access_permissions << 
           ControllerPermission.new(actions, privilege, context,
+                                   options[:namespace],
                                    options[:attribute_check],
                                    options[:model],
                                    options[:load_method],
@@ -524,17 +534,29 @@ module Authorization
   end
   
   class ControllerPermission # :nodoc:
-    attr_reader :actions, :privilege, :context, :attribute_check
-    def initialize (actions, privilege, context, attribute_check = false, 
+    attr_reader :actions, :privilege, :context, :namespace, :attribute_check
+    def initialize (actions, privilege, context, namespace, attribute_check = false, 
                     load_object_model = nil, load_object_method = nil,
                     filter_block = nil)
       @actions = actions.to_set
       @privilege = privilege
       @context = context
+      @namespace = namespace
       @load_object_model = load_object_model
       @load_object_method = load_object_method
       @filter_block = filter_block
       @attribute_check = attribute_check
+    end
+    
+    def controller_context(contr)
+      case @namespace
+        when true
+          "#{contr.class.name.gsub(/::/, "_").gsub(/Controller$/, "").underscore}".to_sym
+        when String, Symbol
+          "#{@namespace.to_s}_#{contr.class.controller_name}".to_sym
+        else
+          contr.class.controller_name.to_sym
+      end
     end
     
     def matches? (action_name)
@@ -545,7 +567,7 @@ module Authorization
       if @filter_block
         return contr.instance_eval(&@filter_block)
       end
-      context = @context || contr.class.controller_name.to_sym
+      context = @context || controller_context(contr)
       object = @attribute_check ? load_object(contr, context) : nil
       privilege = @privilege || :"#{contr.action_name}"
       

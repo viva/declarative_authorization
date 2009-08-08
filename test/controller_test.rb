@@ -384,3 +384,50 @@ class HierachicalControllerTest < ActionController::TestCase
     assert !@controller.authorized?
   end
 end
+<<<<<<< HEAD
+=======
+
+##################
+module Foo
+  class CommonController < MocksController
+    filter_access_to :all
+    filter_access_to :new
+    filter_access_to :show, :namespace => :bar
+    filter_access_to :delete, :namespace => true
+  
+    define_action_methods :new, :show, :delete
+  end
+end
+class NamespacedControllerTest < ActionController::TestCase
+  tests Foo::CommonController
+  def test_namespaced_controller
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role1 do
+          has_permission_on :common, :to => [:new, :show, :delete]
+        end
+        role :test_role2 do
+          has_permission_on :common, :to => [:new]
+          has_permission_on :bar_common, :to => [:show]
+          has_permission_on :foo_common, :to => [:delete]
+        end
+      end
+    }
+    request!(MockUser.new(:test_role1), "new", reader)
+    assert @controller.authorized?
+    request!(MockUser.new(:test_role1), "show", reader)
+    assert !@controller.authorized?
+    request!(MockUser.new(:test_role1), "delete", reader)
+    assert !@controller.authorized?
+
+    request!(MockUser.new(:test_role2), "new", reader)
+    assert @controller.authorized?
+    request!(MockUser.new(:test_role2), "show", reader)
+    assert @controller.authorized?
+    request!(MockUser.new(:test_role2), "delete", reader)
+    assert @controller.authorized?
+  end
+end
+
+>>>>>>> Implement a :namespace option for filter_access_to in order to handle namespaced controllers.
