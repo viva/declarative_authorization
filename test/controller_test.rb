@@ -384,8 +384,6 @@ class HierachicalControllerTest < ActionController::TestCase
     assert !@controller.authorized?
   end
 end
-<<<<<<< HEAD
-=======
 
 ##################
 module Foo
@@ -429,5 +427,3 @@ class NamespacedControllerTest < ActionController::TestCase
     assert @controller.authorized?
   end
 end
-
->>>>>>> Implement a :namespace option for filter_access_to in order to handle namespaced controllers.
